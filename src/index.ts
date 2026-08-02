@@ -6,6 +6,8 @@ import authRoutes from "./routes/authRoutes";
 import teacherRoutes from "./routes/teacherRoutes";
 import studentRoutes from "./routes/studentRoutes";
 import attendanceRoutes from "./routes/attendanceRoutes";
+import marksRoutes from "./routes/marksRoutes";
+import assignmentRoutes from "./routes/assignmentRoutes";
 
 dotenv.config();
 connectDB();
@@ -24,6 +26,8 @@ app.use("/api/auth", authRoutes);
 app.use("/api/teachers", teacherRoutes);
 app.use("/api/students", studentRoutes);
 app.use("/api/attendance", attendanceRoutes);
+app.use("/api/marks", marksRoutes);
+app.use("/api/assignments", assignmentRoutes);
 
 app.listen(PORT, () => {
   console.log(`Server running on http://localhost:${PORT}`);
