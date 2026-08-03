@@ -1,5 +1,6 @@
 import { Response } from "express";
 import Assignment from "../models/Assignment";
+import User from "../models/User";
 import { AuthRequest } from "../middleware/authMiddleware";
 
 // GET all assignments
@@ -34,23 +35,30 @@ export const createAssignment = async (req: AuthRequest, res: Response) => {
 export const submitAssignment = async (req: AuthRequest, res: Response) => {
   try {
     const { id } = req.params; // assignment id
-    const studentId = req.user?.id;
+    const userId = req.user?.id;
+
+    // User এর studentProfile খুঁজে বের করুন (এটাই আসল Student _id)
+    const user = await User.findById(userId);
+    if (!user || !user.studentProfile) {
+      return res.status(400).json({ message: "Student profile not found for this user" });
+    }
+
+    const studentId = user.studentProfile;
 
     const assignment = await Assignment.findById(id);
     if (!assignment) {
       return res.status(404).json({ message: "Assignment not found" });
     }
 
-    // যদি আগেই submit করা থাকে, আবার যোগ করবে না
     const alreadySubmitted = assignment.submittedBy.some(
-      (sId) => sId.toString() === studentId
+      (sId) => sId.toString() === studentId.toString()
     );
 
     if (alreadySubmitted) {
       return res.status(400).json({ message: "Already submitted" });
     }
 
-    assignment.submittedBy.push(studentId as any);
+    assignment.submittedBy.push(studentId);
     await assignment.save();
 
     res.status(200).json({ message: "Assignment submitted successfully", assignment });

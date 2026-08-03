@@ -2,11 +2,12 @@ import { Request, Response } from "express";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import User from "../models/User";
+import Student from "../models/Student";
 
 // Register
 export const registerUser = async (req: Request, res: Response) => {
   try {
-    const { name, email, password, role } = req.body;
+    const { name, email, password, role, className, rollNumber } = req.body;
 
     const existingUser = await User.findOne({ email });
     if (existingUser) {
@@ -15,11 +16,25 @@ export const registerUser = async (req: Request, res: Response) => {
 
     const hashedPassword = await bcrypt.hash(password, 10);
 
+    let studentProfileId = undefined;
+
+    // যদি role student হয়, একটা matching Student record বানাও
+    if (role === "student") {
+      const newStudentRecord = await Student.create({
+        name,
+        email,
+        className: className || "Not Assigned",
+        rollNumber: rollNumber || "N/A",
+      });
+      studentProfileId = newStudentRecord._id;
+    }
+
     const newUser = await User.create({
       name,
       email,
       password: hashedPassword,
       role,
+      studentProfile: studentProfileId,
     });
 
     res.status(201).json({
@@ -29,6 +44,7 @@ export const registerUser = async (req: Request, res: Response) => {
         name: newUser.name,
         email: newUser.email,
         role: newUser.role,
+        studentProfile: newUser.studentProfile || null,
       },
     });
   } catch (error) {
@@ -36,7 +52,7 @@ export const registerUser = async (req: Request, res: Response) => {
   }
 };
 
-// Login
+// Login (আগেরটাই থাকবে, পরিবর্তনের দরকার নেই কারণ আগেই studentProfile যোগ করেছেন)
 export const loginUser = async (req: Request, res: Response) => {
   try {
     const { email, password } = req.body;
@@ -65,6 +81,7 @@ export const loginUser = async (req: Request, res: Response) => {
         name: user.name,
         email: user.email,
         role: user.role,
+        studentProfile: user.studentProfile || null,
       },
     });
   } catch (error) {
