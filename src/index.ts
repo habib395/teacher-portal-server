@@ -12,6 +12,7 @@ import presentationRoutes from "./routes/presentationRoutes";
 import studyMaterialRoutes from "./routes/studyMaterialRoutes";
 import courseRoutes from "./routes/courseRoutes";
 import noticeRoutes from "./routes/noticeRoutes";
+import leaveRoutes from "./routes/leaveRoutes";
 
 dotenv.config();
 connectDB();
@@ -37,6 +38,7 @@ app.use("/api/study-materials", studyMaterialRoutes);
 app.use("/api/courses", courseRoutes);
 app.use("/api/notices", noticeRoutes);
 app.use("/api/study-materials", studyMaterialRoutes);
+app.use("/api/leaves", leaveRoutes);
 
 app.listen(PORT, () => {
   console.log(`Server running on http://localhost:${PORT}`);
