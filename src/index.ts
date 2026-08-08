@@ -36,6 +36,7 @@ app.use("/api/presentations", presentationRoutes);
 app.use("/api/study-materials", studyMaterialRoutes);
 app.use("/api/courses", courseRoutes);
 app.use("/api/notices", noticeRoutes);
+app.use("/api/study-materials", studyMaterialRoutes);
 
 app.listen(PORT, () => {
   console.log(`Server running on http://localhost:${PORT}`);
