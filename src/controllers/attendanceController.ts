@@ -1,6 +1,7 @@
 import { Response } from "express";
 import Attendance from "../models/Attendance";
 import User from "../models/User";
+import Teacher from "../models/Teacher"; // Teacher মডেল ইমপোর্ট করুন (যদি না থাকে)
 import { AuthRequest } from "../middleware/authMiddleware";
 
 // GET attendance by class and date
@@ -24,20 +25,33 @@ export const getAttendanceByClassAndDate = async (req: AuthRequest, res: Respons
 export const saveAttendance = async (req: AuthRequest, res: Response) => {
   try {
     const { classGroupId, date, records } = req.body;
-    // records: [{ studentId, status }, ...]
     const userId = req.user?.id;
 
     if (!classGroupId || !date || !Array.isArray(records)) {
       return res.status(400).json({ message: "classGroupId, date, and records array are required" });
     }
 
-    // টোকেন থেকে Teacher Profile আইডি বের করা
+    // টোকেন থেকে User ও Teacher Profile আইডি বের করা
     const user = await User.findById(userId);
     if (!user || !user.teacherProfile) {
       return res.status(400).json({ message: "Teacher profile not found for this user" });
     }
 
+    // 🔒 সিকিউরিটি চেক: শিক্ষক আসলেই এই ক্লাসের Class Teacher কি না তা যাচাই করা
+    const teacher = await Teacher.findById(user.teacherProfile);
+    if (!teacher) {
+      return res.status(404).json({ message: "Teacher record not found" });
+    }
+
+    // চেক করুন শিক্ষকের classTeacherOf এর সাথে রিকোয়েস্ট পাঠানো classGroupId মিলছে কিনা
+    if (!teacher.classTeacherOf || teacher.classTeacherOf.toString() !== classGroupId) {
+      return res.status(403).json({ 
+        message: "Access Denied! You are only allowed to give attendance for your assigned class." 
+      });
+    }
+
     // নির্দিষ্ট ক্লাস এবং তারিখের জন্য অ্যাটেন্ডেন্স আপডেট বা নতুন তৈরি (upsert) করা
+    // এবং mongoose-এর লেটেস্ট ওয়ার্নিং এড়াতে returnDocument: 'after' ব্যবহার করা হলো
     const updatedAttendance = await Attendance.findOneAndUpdate(
       { classGroupId, date },
       {
@@ -46,7 +60,7 @@ export const saveAttendance = async (req: AuthRequest, res: Response) => {
         date,
         records,
       },
-      { new: true, upsert: true }
+      { returnDocument: 'after', upsert: true }
     );
 
     res.status(200).json({
