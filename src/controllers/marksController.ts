@@ -1,9 +1,8 @@
 import { Response } from "express";
-
 import { AuthRequest } from "../middleware/authMiddleware";
-import Marks from "../models/marks";
+import Marks from "../models/Marks";
 
-// GET all marks for a specific student
+// GET marks for a specific student
 export const getMarksByStudent = async (req: AuthRequest, res: Response) => {
   try {
     const { studentId } = req.query;
@@ -12,8 +11,24 @@ export const getMarksByStudent = async (req: AuthRequest, res: Response) => {
       return res.status(400).json({ message: "studentId query parameter is required" });
     }
 
-    const records = await Marks.find({ studentId });
-    res.status(200).json(records);
+    const marks = await Marks.find({ studentId });
+    res.status(200).json(marks);
+  } catch (error) {
+    res.status(500).json({ message: "Failed to fetch student marks", error });
+  }
+};
+
+// GET all marks for a specific subject + class (to pre-fill the entry form)
+export const getMarksBySubjectAndClass = async (req: AuthRequest, res: Response) => {
+  try {
+    const { subject } = req.query;
+
+    if (!subject || typeof subject !== "string") {
+      return res.status(400).json({ message: "subject query parameter is required" });
+    }
+
+    const marks = await Marks.find({ subject });
+    res.status(200).json(marks);
   } catch (error) {
     res.status(500).json({ message: "Failed to fetch marks", error });
   }
@@ -40,7 +55,7 @@ export const saveMarks = async (req: AuthRequest, res: Response) => {
             subject: record.subject,
             marks: record.marks,
           },
-          { new: true, upsert: true }
+          { returnDocument: 'after', upsert: true }
         )
       )
     );

@@ -67,7 +67,7 @@ export const updateLeaveStatus = async (req: AuthRequest, res: Response) => {
       return res.status(400).json({ message: "Invalid status" });
     }
 
-    const updatedLeave = await Leave.findByIdAndUpdate(id, { status }, { new: true });
+    const updatedLeave = await Leave.findByIdAndUpdate(id, { status }, { returnDocument: 'after' });
 
     if (!updatedLeave) {
       return res.status(404).json({ message: "Leave application not found" });
