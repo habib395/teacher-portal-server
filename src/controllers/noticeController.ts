@@ -15,12 +15,14 @@ export const getNotices = async (req: AuthRequest, res: Response) => {
 // CREATE a notice (Admin only)
 export const createNotice = async (req: AuthRequest, res: Response) => {
   try {
-    const { title, message } = req.body;
+    const { title, message, targetClassGroupId } = req.body;
+    const postedByRole = req.user?.role === "admin" ? "Admin" : "Teacher";
 
     const newNotice = await Notice.create({
       title,
       message,
-      postedBy: "Admin",
+      postedBy: postedByRole,
+      targetClassGroupId: targetClassGroupId || undefined,
     });
 
     res.status(201).json(newNotice);

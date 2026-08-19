@@ -14,24 +14,33 @@ export const getStudents = async (req: AuthRequest, res: Response) => {
   }
 };
 
-// CREATE a student
 export const createStudent = async (req: AuthRequest, res: Response) => {
   try {
-    const { name, email, password, className, rollNumber } = req.body;
+    const { name, email, className, rollNumber, classGroupId } = req.body;
 
-    const existing = await Student.findOne({ email });
-    if (existing) {
+    const existingStudent = await Student.findOne({ email });
+    if (existingStudent) {
       return res.status(400).json({ message: "Student with this email already exists" });
     }
 
-    // ১. প্রথমে students কালেকশনে স্টুডেন্ট তৈরি করা
-    const newStudent = await Student.create({ name, email, className, rollNumber });
+    const existingUser = await User.findOne({ email });
+    if (existingUser) {
+      return res
+        .status(400)
+        .json({ message: "A login account with this email already exists" });
+    }
 
-    // ২. পাসওয়ার্ড হ্যাশ করা
-    const salt = await bcrypt.genSalt(10);
-    const hashedPassword = await bcrypt.hash(password || "123456", salt);
+    const newStudent = await Student.create({
+      name,
+      email,
+      className,
+      rollNumber,
+      classGroupId: classGroupId || undefined,
+    });
 
-    // ৩. বাধ্যতামূলকভাবে users কালেকশনে ইউজার অ্যাকাউন্ট তৈরি করা (এই অংশটি আপনার কোডে মিসিং ছিল)
+    const defaultPassword = "student123";
+    const hashedPassword = await bcrypt.hash(defaultPassword, 10);
+
     await User.create({
       name,
       email,
@@ -40,27 +49,31 @@ export const createStudent = async (req: AuthRequest, res: Response) => {
       studentProfile: newStudent._id,
     });
 
-    res.status(201).json({ message: "Student and user account created successfully", newStudent });
+    res.status(201).json({
+      ...newStudent.toObject(),
+      defaultPassword,
+    });
   } catch (error) {
     res.status(500).json({ message: "Failed to create student", error });
   }
 };
 
-// UPDATE a student
 export const updateStudent = async (req: AuthRequest, res: Response) => {
   try {
     const { id } = req.params;
-    const { name, email, className, rollNumber } = req.body;
+    const { name, email, className, rollNumber, classGroupId } = req.body;
 
     const updatedStudent = await Student.findByIdAndUpdate(
       id,
-      { name, email, className, rollNumber },
-      { new: true }
+      { name, email, className, rollNumber, classGroupId: classGroupId || undefined },
+      { returnDocument: 'after' }
     );
 
     if (!updatedStudent) {
       return res.status(404).json({ message: "Student not found" });
     }
+
+    await User.findOneAndUpdate({ studentProfile: id }, { name, email });
 
     res.status(200).json(updatedStudent);
   } catch (error) {
@@ -68,7 +81,6 @@ export const updateStudent = async (req: AuthRequest, res: Response) => {
   }
 };
 
-// DELETE a student
 export const deleteStudent = async (req: AuthRequest, res: Response) => {
   try {
     const { id } = req.params;
@@ -78,6 +90,8 @@ export const deleteStudent = async (req: AuthRequest, res: Response) => {
     if (!deletedStudent) {
       return res.status(404).json({ message: "Student not found" });
     }
+
+    await User.findOneAndDelete({ studentProfile: id });
 
     res.status(200).json({ message: "Student deleted successfully" });
   } catch (error) {

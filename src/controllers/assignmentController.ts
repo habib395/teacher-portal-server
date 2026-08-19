@@ -13,15 +13,27 @@ export const getAssignments = async (req: AuthRequest, res: Response) => {
   }
 };
 
-// CREATE an assignment (Teacher only)
+// CREATE an assignment (Teacher only) — এখন classGroupId বাধ্যতামূলক
 export const createAssignment = async (req: AuthRequest, res: Response) => {
   try {
-    const { title, subject, deadline } = req.body;
+    const { title, subject, deadline, classGroupId } = req.body;
+    const userId = req.user?.id;
+
+    if (!classGroupId) {
+      return res.status(400).json({ message: "classGroupId is required" });
+    }
+
+    const user = await User.findById(userId);
+    if (!user || !user.teacherProfile) {
+      return res.status(400).json({ message: "Teacher profile not found for this user" });
+    }
 
     const newAssignment = await Assignment.create({
       title,
       subject,
       deadline,
+      classGroupId,
+      createdByTeacherId: user.teacherProfile,
       submittedBy: [],
     });
 
@@ -31,13 +43,12 @@ export const createAssignment = async (req: AuthRequest, res: Response) => {
   }
 };
 
-// SUBMIT an assignment (Student only)
+// SUBMIT an assignment (Student only) — আগের মতোই থাকবে
 export const submitAssignment = async (req: AuthRequest, res: Response) => {
   try {
-    const { id } = req.params; // assignment id
+    const { id } = req.params;
     const userId = req.user?.id;
 
-    // User এর studentProfile খুঁজে বের করুন (এটাই আসল Student _id)
     const user = await User.findById(userId);
     if (!user || !user.studentProfile) {
       return res.status(400).json({ message: "Student profile not found for this user" });

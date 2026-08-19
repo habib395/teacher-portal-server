@@ -33,7 +33,7 @@ export const updateCourse = async (req: AuthRequest, res: Response) => {
     const updated = await Course.findByIdAndUpdate(
       id,
       { name, subject, teacherId, teacherName },
-      { new: true }
+      { returnDocument: 'after' }
     );
 
     if (!updated) {

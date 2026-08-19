@@ -8,6 +8,7 @@ export interface IUser extends Document {
   password: string;
   role: UserRole;
   studentProfile?: mongoose.Types.ObjectId;
+  teacherProfile?: mongoose.Types.ObjectId;
 }
 
 const userSchema = new Schema<IUser>(
@@ -20,7 +21,8 @@ const userSchema = new Schema<IUser>(
       enum: ["admin", "teacher", "student"],
       required: true,
     },
-    studentProfile: { type: Schema.Types.ObjectId, ref: "Student" },
+    studentProfile : { type: Schema.Types.ObjectId, ref: "Student" },
+    teacherProfile : { type: Schema.Types.ObjectId, ref: "Teacher" },
   },
   { timestamps: true }
 );

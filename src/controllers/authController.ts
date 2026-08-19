@@ -3,12 +3,20 @@ import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import User from "../models/User";
 import Student from "../models/Student";
-import { AuthRequest } from "../middleware/authMiddleware";
+import Teacher from "../models/Teacher";
 
-// Register
 export const registerUser = async (req: Request, res: Response) => {
   try {
-    const { name, email, password, role, className, rollNumber } = req.body;
+    const {
+      name,
+      email,
+      password,
+      role,
+      className,
+      rollNumber,
+      subject,
+      phone,
+    } = req.body;
 
     const existingUser = await User.findOne({ email });
     if (existingUser) {
@@ -18,6 +26,7 @@ export const registerUser = async (req: Request, res: Response) => {
     const hashedPassword = await bcrypt.hash(password, 10);
 
     let studentProfileId = undefined;
+    let teacherProfileId = undefined;
 
     if (role === "student") {
       const newStudentRecord = await Student.create({
@@ -29,12 +38,24 @@ export const registerUser = async (req: Request, res: Response) => {
       studentProfileId = newStudentRecord._id;
     }
 
+    if (role === "teacher") {
+      const newTeacherRecord = await Teacher.create({
+        name,
+        email,
+        subject: subject || "Not Assigned",
+        phone: phone || "N/A",
+        teachingAssignments: [],
+      });
+      teacherProfileId = newTeacherRecord._id;
+    }
+
     const newUser = await User.create({
       name,
       email,
       password: hashedPassword,
       role,
       studentProfile: studentProfileId,
+      teacherProfile: teacherProfileId,
     });
 
     res.status(201).json({
@@ -45,13 +66,13 @@ export const registerUser = async (req: Request, res: Response) => {
         email: newUser.email,
         role: newUser.role,
         studentProfile: newUser.studentProfile || null,
+        teacherProfile: newUser.teacherProfile || null,
       },
     });
   } catch (error) {
     res.status(500).json({ message: "Something went wrong", error });
   }
 };
-
 
 export const loginUser = async (req: Request, res: Response) => {
   try {
@@ -82,60 +103,10 @@ export const loginUser = async (req: Request, res: Response) => {
         email: user.email,
         role: user.role,
         studentProfile: user.studentProfile || null,
+        teacherProfile: user.teacherProfile || null,
       },
     });
   } catch (error) {
     res.status(500).json({ message: "Something went wrong", error });
-  }
-};
-
-// UPDATE own profile (name, email)
-export const updateProfile = async (req: AuthRequest, res: Response) => {
-  try {
-    const userId = req.user?.id;
-    const { name, email } = req.body;
-
-    const updatedUser = await User.findByIdAndUpdate(
-      userId,
-      { name, email },
-      { new: true }
-    ).select("-password");
-
-    if (!updatedUser) {
-      return res.status(404).json({ message: "User not found" });
-    }
-
-    res.status(200).json({
-      message: "Profile updated successfully",
-      user: updatedUser,
-    });
-  } catch (error) {
-    res.status(500).json({ message: "Failed to update profile", error });
-  }
-};
-
-// CHANGE password
-export const changePassword = async (req: AuthRequest, res: Response) => {
-  try {
-    const userId = req.user?.id;
-    const { currentPassword, newPassword } = req.body;
-
-    const user = await User.findById(userId);
-    if (!user) {
-      return res.status(404).json({ message: "User not found" });
-    }
-
-    const isMatch = await bcrypt.compare(currentPassword, user.password);
-    if (!isMatch) {
-      return res.status(400).json({ message: "Current password is incorrect" });
-    }
-
-    const hashedPassword = await bcrypt.hash(newPassword, 10);
-    user.password = hashedPassword;
-    await user.save();
-
-    res.status(200).json({ message: "Password changed successfully" });
-  } catch (error) {
-    res.status(500).json({ message: "Failed to change password", error });
   }
 };

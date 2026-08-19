@@ -5,6 +5,7 @@ export interface IStudent extends Document {
   email: string;
   className: string;
   rollNumber: string;
+  classGroupId?: mongoose.Types.ObjectId;
 }
 
 const studentSchema = new Schema<IStudent>(
@@ -13,6 +14,7 @@ const studentSchema = new Schema<IStudent>(
     email: { type: String, required: true, unique: true },
     className: { type: String, required: true },
     rollNumber: { type: String, required: true },
+    classGroupId: { type: Schema.Types.ObjectId, ref: "ClassGroup" },
   },
   { timestamps: true }
 );
