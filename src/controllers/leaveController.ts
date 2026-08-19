@@ -1,13 +1,31 @@
 import { Response } from "express";
 import Leave from "../models/Leave";
 import User from "../models/User";
+import Student from "../models/Student";
 import cloudinary from "../config/cloudinary";
 import { AuthRequest } from "../middleware/authMiddleware";
 
-// GET all leave applications (Teacher/Admin sees all)
+// GET all leave applications (Filtered for teachers based on their assigned class)
 export const getLeaves = async (req: AuthRequest, res: Response) => {
   try {
-    const leaves = await Leave.find().sort({ createdAt: -1 });
+    const user = req.user;
+    if (!user) return res.status(401).json({ message: "Unauthorized" });
+
+    let leaves;
+
+    if (user.role === "teacher") {
+      const teacherUser: any = await User.findById(user.id).populate("teacherProfile");
+      const classGroupId = teacherUser?.teacherProfile?.classTeacherOf;
+
+      if (!classGroupId) {
+        return res.status(200).json([]);
+      }
+
+      leaves = await Leave.find({ classGroupId }).sort({ createdAt: -1 });
+    } else {
+      leaves = await Leave.find().sort({ createdAt: -1 });
+    }
+
     res.status(200).json(leaves);
   } catch (error) {
     res.status(500).json({ message: "Failed to fetch leave applications", error });
@@ -23,6 +41,13 @@ export const createLeave = async (req: AuthRequest, res: Response) => {
     const user = await User.findById(userId);
     if (!user || !user.studentProfile) {
       return res.status(400).json({ message: "Student profile not found for this user" });
+    }
+
+    const studentRecord = await Student.findById(user.studentProfile);
+    if (!studentRecord || !studentRecord.classGroupId) {
+      return res
+        .status(400)
+        .json({ message: "You are not assigned to any class yet. Contact admin." });
     }
 
     let attachmentUrl: string | undefined;
@@ -44,6 +69,7 @@ export const createLeave = async (req: AuthRequest, res: Response) => {
     const newLeave = await Leave.create({
       studentId: user.studentProfile,
       studentName: user.name,
+      classGroupId: studentRecord.classGroupId,
       reason,
       fromDate,
       toDate,
@@ -57,11 +83,11 @@ export const createLeave = async (req: AuthRequest, res: Response) => {
   }
 };
 
-// UPDATE leave status (Teacher only — approve/reject)
+// UPDATE leave status (Teacher only)
 export const updateLeaveStatus = async (req: AuthRequest, res: Response) => {
   try {
     const { id } = req.params;
-    const { status } = req.body; // "approved" or "rejected"
+    const { status } = req.body;
 
     if (!["approved", "rejected"].includes(status)) {
       return res.status(400).json({ message: "Invalid status" });

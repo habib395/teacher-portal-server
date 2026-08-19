@@ -13,7 +13,6 @@ export const getAssignments = async (req: AuthRequest, res: Response) => {
   }
 };
 
-// CREATE an assignment (Teacher only) — এখন classGroupId বাধ্যতামূলক
 export const createAssignment = async (req: AuthRequest, res: Response) => {
   try {
     const { title, subject, deadline, classGroupId } = req.body;
@@ -43,7 +42,6 @@ export const createAssignment = async (req: AuthRequest, res: Response) => {
   }
 };
 
-// SUBMIT an assignment (Student only) — আগের মতোই থাকবে
 export const submitAssignment = async (req: AuthRequest, res: Response) => {
   try {
     const { id } = req.params;

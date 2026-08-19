@@ -23,7 +23,6 @@ export const createStudyMaterial = async (req: AuthRequest, res: Response): Prom
       return;
     }
 
-    // Cloudinary তে ফাইল আপলোড করা হচ্ছে
     const uploadResult = await new Promise<{ secure_url: string; bytes: number }>(
       (resolve, reject) => {
         const stream = cloudinary.uploader.upload_stream(
@@ -37,7 +36,6 @@ export const createStudyMaterial = async (req: AuthRequest, res: Response): Prom
       }
     );
 
-    // File size কে readable format এ (KB/MB) রূপান্তর করা হচ্ছে
     const sizeInMB = (uploadResult.bytes / (1024 * 1024)).toFixed(2);
     const fileSize = `${sizeInMB} MB`;
 
