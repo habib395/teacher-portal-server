@@ -7,13 +7,18 @@ import { AuthRequest } from "../middleware/authMiddleware";
 // GET attendance by class and date
 export const getAttendanceByClassAndDate = async (req: AuthRequest, res: Response) => {
   try {
-    const { classGroupId, date } = req.query;
+    let { classGroupId, date } = req.query;
 
-    if (!classGroupId || !date || typeof classGroupId !== "string" || typeof date !== "string") {
+    if (!classGroupId || !date || typeof date !== "string") {
       return res.status(400).json({ message: "classGroupId and date query parameters are required" });
     }
 
-    const attendanceRecord = await Attendance.findOne({ classGroupId, date });
+    let targetClassId = Array.isArray(classGroupId) ? classGroupId[0] : classGroupId;
+    if (typeof targetClassId === "string" && targetClassId.includes(",")) {
+      targetClassId = targetClassId.split(",")[0];
+    }
+
+    const attendanceRecord = await Attendance.findOne({ classGroupId: targetClassId, date } as any);
     
     res.status(200).json(attendanceRecord || { records: [] });
   } catch (error) {
@@ -41,14 +46,19 @@ export const saveAttendance = async (req: AuthRequest, res: Response) => {
       return res.status(404).json({ message: "Teacher record not found" });
     }
 
-    if (!teacher.classTeacherOf || teacher.classTeacherOf.toString() !== classGroupId) {
+    const classTeacherList = (teacher.classTeacherOf || []) as any[];
+    const isAssignedClassTeacher = classTeacherList.some(
+      (id) => id.toString() === classGroupId
+    );
+
+    if (!isAssignedClassTeacher) {
       return res.status(403).json({ 
         message: "Access Denied! You are only allowed to give attendance for your assigned class." 
       });
     }
 
     const updatedAttendance = await Attendance.findOneAndUpdate(
-      { classGroupId, date },
+      { classGroupId, date } as any,
       {
         classGroupId,
         createdByTeacherId: user.teacherProfile,
@@ -67,7 +77,7 @@ export const saveAttendance = async (req: AuthRequest, res: Response) => {
   }
 };
 
-// GET attendance summary for a specific student (for calculating attendance rate)
+// GET attendance summary for a specific student
 export const getAttendanceByStudent = async (req: AuthRequest, res: Response) => {
   try {
     const { studentId } = req.query;
@@ -76,14 +86,14 @@ export const getAttendanceByStudent = async (req: AuthRequest, res: Response) =>
       return res.status(400).json({ message: "studentId query parameter is required" });
     }
 
-    const attendanceDocs = await Attendance.find({ "records.studentId": studentId });
+    const attendanceDocs = await Attendance.find({ "records.studentId": studentId } as any);
 
     let totalDays = 0;
     let presentDays = 0;
 
     attendanceDocs.forEach((doc) => {
       const studentRecord = doc.records.find(
-        (r) => r.studentId.toString() === studentId
+        (r: any) => r.studentId.toString() === studentId
       );
       if (studentRecord) {
         totalDays++;

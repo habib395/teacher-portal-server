@@ -10,7 +10,7 @@ export interface ITeacher extends Document {
   email: string;
   subject: string; 
   phone: string;
-  classTeacherOf?: mongoose.Types.ObjectId; 
+  classTeacherOf?: mongoose.Types.ObjectId[];
   teachingAssignments: ITeachingAssignment[];
 }
 
@@ -28,7 +28,7 @@ const teacherSchema = new Schema<ITeacher>(
     email: { type: String, required: true, unique: true },
     subject: { type: String, required: true },
     phone: { type: String, required: true },
-    classTeacherOf: { type: Schema.Types.ObjectId, ref: "ClassGroup" },
+    classTeacherOf: [{ type: Schema.Types.ObjectId, ref: "ClassGroup" }],
     teachingAssignments: { type: [teachingAssignmentSchema], default: [] },
   },
   { timestamps: true }

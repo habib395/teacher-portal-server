@@ -14,6 +14,24 @@ export const getTeachers = async (req: AuthRequest, res: Response) => {
   }
 };
 
+// GET current logged-in teacher's profile
+export const getMyTeacherProfile = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const userId = req.user?.id;
+
+    const user = await User.findById(userId).populate("teacherProfile");
+    
+    if (!user || !user.teacherProfile) {
+      res.status(404).json({ message: "Teacher profile not found" });
+      return;
+    }
+
+    res.status(200).json(user.teacherProfile);
+  } catch (error: any) {
+    res.status(500).json({ message: "Failed to fetch teacher profile", error: error.message });
+  }
+};
+
 export const createTeacher = async (req: AuthRequest, res: Response) => {
   try {
     const { name, email, subject, phone, classTeacherOf, teachingAssignments } = req.body;
@@ -61,7 +79,7 @@ export const createTeacher = async (req: AuthRequest, res: Response) => {
 
 export const updateTeacher = async (req: AuthRequest, res: Response) => {
   try {
-    const { id } = req.params;
+    let { id } = req.params;
     const { name, email, subject, phone, classTeacherOf, teachingAssignments } = req.body;
 
     const updatedTeacher = await Teacher.findByIdAndUpdate(

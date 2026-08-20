@@ -110,3 +110,61 @@ export const loginUser = async (req: Request, res: Response) => {
     res.status(500).json({ message: "Something went wrong", error });
   }
 };
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export const updateProfile = async (req: any, res: Response) => {
+  try {
+    const userId = req.user.id; 
+    const { name, email } = req.body;
+
+    const updatedUser = await User.findByIdAndUpdate(
+      userId,
+      { name, email },
+      { new: true }
+    );
+
+    if (!updatedUser) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    res.status(200).json({
+      message: "Profile updated successfully",
+      user: {
+        id: updatedUser._id,
+        name: updatedUser.name,
+        email: updatedUser.email,
+        role: updatedUser.role,
+        studentProfile: updatedUser.studentProfile || null,
+        teacherProfile: updatedUser.teacherProfile || null,
+      },
+    });
+  } catch (error) {
+    res.status(500).json({ message: "Something went wrong", error });
+  }
+};
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export const changePassword = async (req: any, res: Response) => {
+  try {
+    const userId = req.user.id;
+    const { currentPassword, newPassword } = req.body;
+
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    const isMatch = await bcrypt.compare(currentPassword, user.password);
+    if (!isMatch) {
+      return res.status(400).json({ message: "Incorrect current password" });
+    }
+
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+    user.password = hashedPassword;
+    await user.save();
+
+    res.status(200).json({ message: "Password changed successfully" });
+  } catch (error) {
+    res.status(500).json({ message: "Something went wrong", error });
+  }
+};

@@ -1,25 +1,71 @@
 import { Response } from "express";
 import { StudyMaterial } from "../models/stydyMaterials";
+import User from "../models/User";
+import Student from "../models/Student";
+import Teacher from "../models/Teacher"; 
 import cloudinary from "../config/cloudinary";
 import { AuthRequest } from "../middleware/authMiddleware";
 
-// Get all study materials
+// Get study materials (Filtered by role and class)
 export const getStudyMaterials = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
-    const materials = await StudyMaterial.find().sort({ createdAt: -1 });
+    const user = req.user;
+    if (!user) {
+      res.status(401).json({ message: "Unauthorized" });
+      return;
+    }
+
+    let query = {};
+
+    if (user.role === "teacher") {
+      const teacherUser: any = await User.findById(user.id).populate("teacherProfile");
+      const teacherId = teacherUser?.teacherProfile?._id;
+
+      if (teacherId) {
+        query = { teacher: teacherId };
+      } else {
+        res.status(200).json([]);
+        return;
+      }
+    } else if (user.role === "student") {
+      const studentUser = await User.findById(user.id);
+      const studentRecord = await Student.findById(studentUser?.studentProfile);
+      
+      if (!studentRecord || !studentRecord.classGroupId) {
+        res.status(200).json([]);
+        return;
+      }
+
+      query = { classGroupId: studentRecord.classGroupId };
+    }
+
+    const materials = await StudyMaterial.find(query).sort({ createdAt: -1 });
     res.status(200).json(materials);
   } catch (error: any) {
     res.status(500).json({ message: "Failed to fetch study materials", error: error.message });
   }
 };
 
-// Create (upload) study material
+// Create (upload) study material (Teacher selects class)
 export const createStudyMaterial = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
-    const { title, subject, category } = req.body;
+    const { title, subject, category, classGroupId } = req.body;
 
     if (!req.file) {
       res.status(400).json({ message: "No file uploaded" });
+      return;
+    }
+
+    if (!classGroupId) {
+      res.status(400).json({ message: "Class selection is required" });
+      return;
+    }
+
+    const user = await User.findById(req.user?.id).populate("teacherProfile");
+    const teacherId = (user?.teacherProfile as any)?._id;
+
+    if (!teacherId && req.user?.role === "teacher") {
+      res.status(403).json({ message: "Teacher profile not found for this user" });
       return;
     }
 
@@ -46,6 +92,8 @@ export const createStudyMaterial = async (req: AuthRequest, res: Response): Prom
       fileSize,
       uploadDate: new Date().toISOString().split("T")[0],
       downloadUrl: uploadResult.secure_url,
+      classGroupId,
+      teacher: teacherId,
     });
 
     const savedMaterial = await newMaterial.save();

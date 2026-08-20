@@ -15,14 +15,14 @@ export const getClassGroups = async (req: AuthRequest, res: Response) => {
 // CREATE a class group (Admin only)
 export const createClassGroup = async (req: AuthRequest, res: Response) => {
   try {
-    const { programName, yearName } = req.body;
+    const { programName, yearName, section } = req.body;
 
-    const existing = await ClassGroup.findOne({ programName, yearName });
+    const existing = await ClassGroup.findOne({ programName, yearName, section: section || null });
     if (existing) {
       return res.status(400).json({ message: "This class group already exists" });
     }
 
-    const newClassGroup = await ClassGroup.create({ programName, yearName });
+    const newClassGroup = await ClassGroup.create({ programName, yearName, section: section || undefined });
     res.status(201).json(newClassGroup);
   } catch (error) {
     res.status(500).json({ message: "Failed to create class group", error });
@@ -44,3 +44,4 @@ export const deleteClassGroup = async (req: AuthRequest, res: Response) => {
     res.status(500).json({ message: "Failed to delete class group", error });
   }
 };
+

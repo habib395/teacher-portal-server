@@ -4,11 +4,13 @@ import {
   createTeacher,
   updateTeacher,
   deleteTeacher,
+  getMyTeacherProfile,
 } from "../controllers/teacherController";
 import { protect, authorizeRoles } from "../middleware/authMiddleware";
 
 const router = Router();
 
+router.get("/me", protect, getMyTeacherProfile); 
 router.get("/", protect, getTeachers);
 router.post("/", protect, authorizeRoles("admin"), createTeacher);
 router.put("/:id", protect, authorizeRoles("admin"), updateTeacher);
